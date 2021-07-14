@@ -63,8 +63,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\CustomRenderer.cs" />
+    <Compile Include="Assets\Demo\RenderFeature\PlanarShadow\Player.cs" />
     <Compile Include="Assets\Scripts\SimpleCameraController.cs" />
+    <None Include="Assets\Demo\RenderFeature\PlanarShadow\PlanarShadow2.shader" />
+    <None Include="Assets\Demo\RenderFeature\PlanarShadow\PlanarShadow.shader" />
     <None Include="Assets\Demo\RenderFeature\Outline\ToonBasicOutline.shader" />
+    <None Include="Assets\Demo\RenderFeature\PlanarShadow\Player.shader" />
     <None Include="Assets\Demo\RenderFeature\Outline\SobelFilter.shader" />
     <Reference Include="UnityEngine">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.4.14f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
