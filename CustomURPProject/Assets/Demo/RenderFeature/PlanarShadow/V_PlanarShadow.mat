@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: V_PlanarShadow
-  m_Shader: {fileID: 4800000, guid: 352ee8f492927da4fb297c88de6bd8ca, type: 3}
+  m_Shader: {fileID: 4800000, guid: b15857fcc64f9ab4faaccebf59e2b0bd, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -24,5 +24,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _ShadowInvLen: 8.32
-    m_Colors: []
+    - _GroundHeight: 1.02
+    - _ShadowFalloff: 0.119
+    m_Colors:
+    - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}

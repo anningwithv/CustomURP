@@ -3,34 +3,46 @@
 	Properties 
 	{
 		_MainTex("Texture", 2D) = "white" {}
-		_ShadowInvLen("ShadowInvLen", float) = 1.0
+
+		[Header(Shadow)]
+		_GroundHeight("_GroundHeight", Float) = 0
+		_ShadowFalloff("_ShadowFalloff", Range(0,1)) = 0.05
+		_ShadowColor("ShadowColor", Color) = (0,0,0,1)
 	}
 	SubShader 
 	{
-		Tags { "RenderType"="Opaque" }
+		Tags
+		{
+			"RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent"
+		}
+		LOD 300
 		
+		// 物体自身着色使用URP自带的ForwardLit pass
+		//USEPASS "Universal Render Pipeline/Lit/ForwardLit"
+
         ZWrite Off
         ColorMask RGB
         Blend SrcAlpha OneMinusSrcAlpha
 		Cull Back
+	    //深度稍微偏移防止阴影与地面穿插
+	    //Offset - 1 , 0
 
 		Pass 
 		{
 			Name "PlanarShadow"
 			
             HLSLPROGRAM
+
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_fog
 			
             CBUFFER_START(UnityPerMaterial)
-			float4 _ShadowPlane;
-			float4 _ShadowProjDir;
-			float4 _WorldPos;
-			float _ShadowInvLen;
-			float4 _ShadowFadeParams;
+			float _GroundHeight;
+			float4 _ShadowColor;
 			float _ShadowFalloff;
             CBUFFER_END
 			
@@ -44,44 +56,57 @@
             struct Varyings 
             {
                 float4 vertex : SV_POSITION;
-				float3 xlv_TEXCOORD0 : TEXCOORD0;
-				float3 xlv_TEXCOORD1 : TEXCOORD1;
+				float4 color : COLOR;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
+			float3 ShadowProjectPos(float4 vertPos)
+			{
+				float3 shadowPos;
+
+				//得到顶点的世界空间坐标
+				float3 worldPos = mul(unity_ObjectToWorld, vertPos).xyz;
+
+				//灯光方向
+				Light mainLight = GetMainLight();
+				float3 lightDir = normalize(mainLight.direction.xyz);
+
+				//阴影的世界空间坐标（低于地面的部分不做改变）
+				shadowPos.y = min(worldPos.y, _GroundHeight);
+				shadowPos.xz = worldPos.xz - lightDir.xz * max(0, worldPos.y - _GroundHeight) / lightDir.y;
+
+				return shadowPos;
+			}
+
             Varyings vert(Attributes input) 
             {
                 Varyings o = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-	
-				float4 lightdir = normalize(_ShadowProjDir);
-				float3 worldpos = mul(unity_ObjectToWorld, input.vertex).xyz;
-				// _ShadowPlane.w = p0 * n  // 平面的w分量就是p0 * n
-				float distance = (_ShadowPlane.w - dot(_ShadowPlane.xyz, worldpos)) / dot(_ShadowPlane.xyz, lightdir.xyz);
-				worldpos = worldpos + distance * lightdir.xyz;
-				o.vertex = mul(unity_MatrixVP, float4(worldpos, 1.0));
-				o.xlv_TEXCOORD0 = _WorldPos.xyz;
-				o.xlv_TEXCOORD1 = worldpos;
+
+				//得到阴影的世界空间坐标
+				float3 shadowPos = ShadowProjectPos(input.vertex);
+
+				//转换到裁切空间
+				o.vertex = TransformWorldToHClip(shadowPos);
+				//o.vertex = mul(UNITY_MATRIX_VP, shadowPos);
+
+				//得到中心点世界坐标
+				//unity_ObjectToWorld这个矩阵每一行的第四个分量分别对应Transform的xyz
+				float3 center = float3(unity_ObjectToWorld[0].w, _GroundHeight, unity_ObjectToWorld[2].w);
+				//计算阴影衰减
+				float falloff = 1 - saturate(distance(shadowPos, center) * _ShadowFalloff);
+
+				//阴影颜色
+				o.color = _ShadowColor;
+				o.color.a *= falloff;
 
                 return o;
             }
 			
 			half4 frag(Varyings i) : SV_Target
 			{
-				float3 posToPlane_2 = (i.xlv_TEXCOORD0 - i.xlv_TEXCOORD1);
-				float4 color;
-				color.xyz = float3(0.0, 0.0, 0.0);
-
-				// 下面两种阴影衰减公式都可以使用(当然也可以自己写衰减公式)
-				// 1. 王者荣耀的衰减公式
-				color.w = (pow((1.0 - clamp(((sqrt(dot(posToPlane_2, posToPlane_2)) * _ShadowInvLen) - _ShadowFadeParams.x), 0.0, 1.0)), _ShadowFadeParams.y) * _ShadowFadeParams.z);
-
-				// 2. https://zhuanlan.zhihu.com/p/31504088 这篇文章介绍的另外的阴影衰减公式
-				//color.w = 1.0 - saturate(distance(i.xlv_TEXCOORD0, i.xlv_TEXCOORD1) * _ShadowFalloff);
-
-				//return color;
-				return half4(_ShadowFalloff, _ShadowFalloff, _ShadowFalloff, 1);
+				return i.color;
 			}
             ENDHLSL
 		}
