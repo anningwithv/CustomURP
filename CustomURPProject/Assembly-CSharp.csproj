@@ -63,6 +63,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\CustomRenderer.cs" />
+    <Compile Include="Assets\Demo\CustomRenderFeature\SimpleDrawMesh\VRendererFeature.cs" />
+    <Compile Include="Assets\Demo\CustomRenderFeature\SimpleDrawMesh\VRendererPass.cs" />
     <Compile Include="Assets\Scripts\SimpleCameraController.cs" />
     <None Include="Assets\Demo\RenderFeature\PlanarShadow\PlanarShadow.shader" />
     <None Include="Assets\Demo\RenderFeature\PlanarShadow\PlanarShadow_WZ.shader" />
