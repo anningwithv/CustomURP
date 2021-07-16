@@ -32,7 +32,7 @@ public class BlurRendererPass : ScriptableRenderPass
     public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
     {
         base.Configure(cmd, cameraTextureDescriptor);
-
+        m_OpaqueDesc.msaaSamples = 1;
         m_OpaqueDesc = cameraTextureDescriptor;
     }
 
