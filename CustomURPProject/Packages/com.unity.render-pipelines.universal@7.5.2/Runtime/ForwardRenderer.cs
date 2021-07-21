@@ -321,6 +321,8 @@ namespace UnityEngine.Rendering.Universal
             RenderTextureDescriptor cameraTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
 
             // Special path for depth only offscreen cameras. Only write opaques + transparents.
+            //首先，如果渲染的相机是深度相机，有自己的RT，那么，Setup之后的过程都不会执行，默认会执行3个pass，
+            //不透明物体，天空球，和半透明物体。
             bool isOffscreenDepthTexture = cameraData.targetTexture != null 
                 && cameraData.targetTexture.format == RenderTextureFormat.Depth;
             if (isOffscreenDepthTexture)
