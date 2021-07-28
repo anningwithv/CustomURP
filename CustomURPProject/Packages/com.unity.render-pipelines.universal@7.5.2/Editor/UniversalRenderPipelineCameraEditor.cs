@@ -629,10 +629,10 @@ namespace UnityEditor.Rendering.Universal
                 settings.DrawCullingMask();
                 settings.DrawOcclusionCulling();
 
-                //if (camType == CameraRenderType.Overlay && m_AdditionalCameraData.CompareTag("UICamera"))
-                //{
-                //    DrawUIRenerScale();
-                //}
+                if (camType == CameraRenderType.Overlay && m_AdditionalCameraData.CompareTag("UICamera"))
+                {
+                    DrawUIRenerScale();
+                }
 
                 EditorGUILayout.Space();
                 EditorGUILayout.Space();

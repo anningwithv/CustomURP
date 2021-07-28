@@ -50,18 +50,18 @@ namespace UnityEngine.Rendering.Universal
         RenderTargetHandle m_AfterPostProcessColor;
         RenderTargetHandle m_ColorGradingLut;
 
-        ////场景最后需要拷贝进这个buffer;
-        ////这个buffer也是ui相机的RenderBuffer;
-        //RenderTargetHandle m_SceneFinalColorAttachment;
-        ////用来处理color surface dimension 和 depth surface dimension不一致问题;
-        //RenderTargetHandle m_SceneFinalDepthAttachment;
-        ////将场景相机和UI相机分开渲染;场景相机走线性渲染;ui相机走gamma渲染;
-        //bool m_SplitUICameraAndSceneCameraRenderer = true;
-        //public void ChangeSplitUICameraAndSceneCameraRenderer(out bool tag)
-        //{
-        //    m_SplitUICameraAndSceneCameraRenderer = !m_SplitUICameraAndSceneCameraRenderer;
-        //    tag = m_SplitUICameraAndSceneCameraRenderer;
-        //}
+        //场景最后需要拷贝进这个buffer;
+        //这个buffer也是ui相机的RenderBuffer;
+        RenderTargetHandle m_SceneFinalColorAttachment;
+        //用来处理color surface dimension 和 depth surface dimension不一致问题;
+        RenderTargetHandle m_SceneFinalDepthAttachment;
+        //将场景相机和UI相机分开渲染;场景相机走线性渲染;ui相机走gamma渲染;
+        bool m_SplitUICameraAndSceneCameraRenderer = true;
+        public void ChangeSplitUICameraAndSceneCameraRenderer(out bool tag)
+        {
+            m_SplitUICameraAndSceneCameraRenderer = !m_SplitUICameraAndSceneCameraRenderer;
+            tag = m_SplitUICameraAndSceneCameraRenderer;
+        }
          
         float m_UIRenderScale = 1f;
         bool m_UIRenderScaleChanged = false;
@@ -179,8 +179,8 @@ namespace UnityEngine.Rendering.Universal
             m_OpaqueColor.Init("_CameraOpaqueTexture");
             m_AfterPostProcessColor.Init("_AfterPostProcessTexture");
             m_ColorGradingLut.Init("_InternalGradingLut");
-            //m_SceneFinalColorAttachment.Init("_SceneMainCameraFinalTexture");
-            //m_SceneFinalDepthAttachment.Init("_SceneDepthFinalTexture");
+            m_SceneFinalColorAttachment.Init("_SceneMainCameraFinalTexture");
+            m_SceneFinalDepthAttachment.Init("_SceneDepthFinalTexture");
         }
         #endregion
 
@@ -295,11 +295,11 @@ namespace UnityEngine.Rendering.Universal
             }
             else
             {
-                //if (m_SplitUICameraAndSceneCameraRenderer)
-                //{
-                //    RefreshCameraColorAttachment(context, ref renderingData.cameraData);
-                //}
-                //else
+                if (m_SplitUICameraAndSceneCameraRenderer)
+                {
+                    RefreshCameraColorAttachment(context, ref renderingData.cameraData);
+                }
+                else
                 {
                     m_ActiveCameraColorAttachment = m_CameraColorAttachment;
                     m_ActiveCameraDepthAttachment = m_CameraDepthAttachment;
@@ -311,6 +311,7 @@ namespace UnityEngine.Rendering.Universal
 
 
         /// <inheritdoc />
+        /// 在UniversalPipeline的RenderSingleCamera方法中被调用，在Execute方法之前
         public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData)
         {
 #if ADAPTIVE_PERFORMANCE_2_1_0_OR_NEWER
@@ -525,13 +526,13 @@ namespace UnityEngine.Rendering.Universal
                     // We need final blit to resolve to screen
                     if (!cameraTargetResolved)
                     {
-                        //if (m_SplitUICameraAndSceneCameraRenderer && 
-                        //    cameraData.camera.tag.Contains("UICamera"))
-                        //{
-                        //    m_CustomFinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass);
-                        //    EnqueuePass(m_CustomFinalBlitPass);
-                        //}
-                        //else
+                        if (m_SplitUICameraAndSceneCameraRenderer && 
+                            cameraData.camera.tag.Contains("UICamera"))
+                        {
+                            m_CustomFinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass);
+                            EnqueuePass(m_CustomFinalBlitPass);
+                        }
+                        else
                         {
                             m_FinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass);
                             EnqueuePass(m_FinalBlitPass);
@@ -560,49 +561,49 @@ namespace UnityEngine.Rendering.Universal
 
             //将场景相机后处理后的结果拷贝到RT;
             //如果只有camera main一个相机,则不要gamma矫正;
-            //if (m_SplitUICameraAndSceneCameraRenderer && cameraData.renderType == CameraRenderType.Base
-            //    && cameraData.camera == Camera.main && !lastCameraInTheStack)
-            //{
-            //    m_CopySceneFinalPass.Setup(m_ActiveCameraColorAttachment, m_SceneFinalColorAttachment, uiRenderScale);
-            //    EnqueuePass(m_CopySceneFinalPass);
-            //}
+            if (m_SplitUICameraAndSceneCameraRenderer && cameraData.renderType == CameraRenderType.Base
+                && cameraData.camera == Camera.main && !lastCameraInTheStack)
+            {
+                m_CopySceneFinalPass.Setup(m_ActiveCameraColorAttachment, m_SceneFinalColorAttachment, uiRenderScale);
+                EnqueuePass(m_CopySceneFinalPass);
+            }
         }
 
-        //private void RefreshCameraColorAttachment(ScriptableRenderContext context, ref CameraData cameraData)
-        //{
-        //    if (!m_SplitUICameraAndSceneCameraRenderer)
-        //        return;
+        private void RefreshCameraColorAttachment(ScriptableRenderContext context, ref CameraData cameraData)
+        {
+            if (!m_SplitUICameraAndSceneCameraRenderer)
+                return;
 
-        //    CommandBuffer cmd = CommandBufferPool.Get(k_ReleaseCameraTextures);
+            CommandBuffer cmd = CommandBufferPool.Get(k_ReleaseCameraTextures);
 
-        //    //we need create a new depth texture if UICamera dimensions changed.
-        //    if (m_UIRenderScaleChanged || 
-        //        m_ActiveCameraDepthAttachment.id != m_SceneFinalDepthAttachment.id)
-        //    {
-        //        cmd.ReleaseTemporaryRT(m_SceneFinalDepthAttachment.id);
+            //we need create a new depth texture if UICamera dimensions changed.
+            if (m_UIRenderScaleChanged || 
+                m_ActiveCameraDepthAttachment.id != m_SceneFinalDepthAttachment.id)
+            {
+                cmd.ReleaseTemporaryRT(m_SceneFinalDepthAttachment.id);
 
-        //        RenderTextureDescriptor descriptor = cameraData.cameraTargetDescriptor;
-        //        Camera camera = cameraData.camera;
-        //        descriptor.width = (int)(descriptor.width * uiRenderScale);
-        //        descriptor.height = (int)(descriptor.height * uiRenderScale);
-        //        descriptor.useMipMap = false;
-        //        descriptor.autoGenerateMips = false;
-        //        descriptor.depthBufferBits = k_DepthStencilBufferBits;
-        //        descriptor.colorFormat = RenderTextureFormat.Depth;
-        //        cmd.GetTemporaryRT(m_SceneFinalDepthAttachment.id, descriptor, FilterMode.Point);
-        //        m_ActiveCameraDepthAttachment = m_SceneFinalDepthAttachment;
-        //        m_UIRenderScaleChanged = false;
-        //    }
+                RenderTextureDescriptor descriptor = cameraData.cameraTargetDescriptor;
+                Camera camera = cameraData.camera;
+                descriptor.width = (int)(descriptor.width * uiRenderScale);
+                descriptor.height = (int)(descriptor.height * uiRenderScale);
+                descriptor.useMipMap = false;
+                descriptor.autoGenerateMips = false;
+                descriptor.depthBufferBits = k_DepthStencilBufferBits;
+                descriptor.colorFormat = RenderTextureFormat.Depth;
+                cmd.GetTemporaryRT(m_SceneFinalDepthAttachment.id, descriptor, FilterMode.Point);
+                m_ActiveCameraDepthAttachment = m_SceneFinalDepthAttachment;
+                m_UIRenderScaleChanged = false;
+            }
 
-        //    if (m_ActiveCameraColorAttachment.id != m_SceneFinalColorAttachment.id)
-        //    {
-        //        cmd.ReleaseTemporaryRT(m_ActiveCameraColorAttachment.id);
-        //        m_ActiveCameraColorAttachment = m_SceneFinalColorAttachment;
-        //    }
-        //    context.ExecuteCommandBuffer(cmd);
+            if (m_ActiveCameraColorAttachment.id != m_SceneFinalColorAttachment.id)
+            {
+                cmd.ReleaseTemporaryRT(m_ActiveCameraColorAttachment.id);
+                m_ActiveCameraColorAttachment = m_SceneFinalColorAttachment;
+            }
+            context.ExecuteCommandBuffer(cmd);
 
-        //    CommandBufferPool.Release(cmd);
-        //}
+            CommandBufferPool.Release(cmd);
+        }
         /// <inheritdoc />
         public override void SetupLights(ScriptableRenderContext context, ref RenderingData renderingData)
         {

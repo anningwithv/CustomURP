@@ -361,13 +361,13 @@ namespace UnityEngine.Rendering.Universal
                             }
 
                             //Note: we need set uiCameraRenderScale to render.
-                            //if (data.CompareTag("UICamera"))
-                            //{
-                            //    float uiRenderScale = data.uiRenderScale;
-                            //    ForwardRenderer render =  data.scriptableRenderer as ForwardRenderer;
-                            //    if(render != null)
-                            //        render.uiRenderScale = uiRenderScale;
-                            //}
+                            if (data.CompareTag("UICamera"))
+                            {
+                                float uiRenderScale = data.uiRenderScale;
+                                ForwardRenderer render =  data.scriptableRenderer as ForwardRenderer;
+                                if(render != null)
+                                    render.uiRenderScale = uiRenderScale;
+                            }
 
                             var currCameraRendererType = data?.scriptableRenderer.GetType();
                             if (currCameraRendererType != baseCameraRendererType)
